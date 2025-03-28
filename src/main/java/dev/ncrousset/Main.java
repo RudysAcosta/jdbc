@@ -3,7 +3,7 @@ package dev.ncrousset;
 
 import dev.ncrousset.models.Product;
 import dev.ncrousset.repositories.ProductRepositoryImpl;
-import dev.ncrousset.utils.ConexionBaseDatos;
+import dev.ncrousset.utils.DataConnection;
 
 import java.sql.Connection;
 import java.sql.Date;
@@ -14,7 +14,7 @@ import java.util.List;
 public class Main {
     public static void main(String[] args) {
 
-        try (Connection connection = ConexionBaseDatos.getInstance()) {
+        try (Connection connection = DataConnection.getInstance()) {
             System.out.println("Method create()");
             Product newProduct = new Product("Test Insert", 200, Date.valueOf(LocalDate.now()));
             ProductRepositoryImpl.getInstance().save(newProduct);

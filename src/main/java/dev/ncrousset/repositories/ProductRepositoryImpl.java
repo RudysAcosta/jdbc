@@ -1,7 +1,7 @@
 package dev.ncrousset.repositories;
 
 import dev.ncrousset.models.Product;
-import dev.ncrousset.utils.ConexionBaseDatos;
+import dev.ncrousset.utils.DataConnection;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -14,7 +14,7 @@ public class ProductRepositoryImpl implements Repository<Product> {
     private ProductRepositoryImpl() {}
 
     private Connection getConnection() throws SQLException {
-        return ConexionBaseDatos.getInstance();
+        return DataConnection.getInstance();
     }
 
     public static ProductRepositoryImpl getInstance() {
@@ -79,6 +79,7 @@ public class ProductRepositoryImpl implements Repository<Product> {
         } catch ( SQLException  e) {
             e.printStackTrace();
         }
+
         return product;
     }
 

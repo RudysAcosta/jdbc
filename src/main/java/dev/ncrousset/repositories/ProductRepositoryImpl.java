@@ -1,5 +1,6 @@
 package dev.ncrousset.repositories;
 
+import dev.ncrousset.models.Category;
 import dev.ncrousset.models.Product;
 import dev.ncrousset.utils.DataConnection;
 
@@ -29,8 +30,13 @@ public class ProductRepositoryImpl implements Repository<Product> {
     public List<Product> getAll() {
         List<Product> products = new ArrayList<>();
 
+        String sql = """
+                    SELECT p.*, c.id AS c_id, c.name AS c_name 
+                    FROM products p
+                    JOIN categories c ON p.category_id = c.id""";
+
         try(Statement statement = getConnection().createStatement();
-            ResultSet resultSet = statement.executeQuery("select * from products")
+            ResultSet resultSet = statement.executeQuery(sql)
         ) {
             while (resultSet.next()) {
                 Product product = createProduct(resultSet);
@@ -47,9 +53,14 @@ public class ProductRepositoryImpl implements Repository<Product> {
     @Override
     public Product getById(Long id) {
         Product product = null;
+
+        String sql = """
+                    SELECT p.*, c.id AS c_id, c.name AS c_name 
+                    FROM products p
+                    JOIN categories c ON p.category_id = c.id 
+                    WHERE p.id = ?""";
         
-        try (PreparedStatement statement = getConnection().
-                prepareStatement("SELECT * FROM products WHERE id = ?")) {
+        try (PreparedStatement statement = getConnection().prepareStatement(sql)) {
             statement.setLong(1, id);
 
             try(ResultSet result = statement.executeQuery()) {
@@ -67,7 +78,12 @@ public class ProductRepositoryImpl implements Repository<Product> {
     @Override
     public Product getLast() {
         Product product = null;
-        String sql = "SELECT * FROM products ORDER BY id DESC LIMIT 1";
+
+        String sql = """
+                    SELECT p.*, c.id AS c_id, c.name AS c_name 
+                    FROM products p
+                    JOIN categories c ON p.category_id = c.id 
+                    ORDER BY id DESC LIMIT 1""";
 
         try(PreparedStatement statement = getConnection().prepareStatement(sql)) {
 
@@ -85,11 +101,12 @@ public class ProductRepositoryImpl implements Repository<Product> {
 
     @Override
     public void save(Product product) {
-        String sql = "INSERT INTO products(name, price, date)VALUES(?, ?, ?)";
-        try(PreparedStatement statement = getConnection().prepareStatement(sql)) {
+        String sql = "INSERT INTO products(name, price, date, category_id)VALUES(?, ?, ?, ?)";
+        try(PreparedStatement statement = getConnection().prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             statement.setString(1, product.getName());
             statement.setInt(2, product.getPrice());
             statement.setDate(3, new Date(product.getDate().getTime()));
+            statement.setLong(4, product.getCategory().getId());
 
             statement.executeUpdate();
         } catch (SQLException e) {
@@ -100,11 +117,12 @@ public class ProductRepositoryImpl implements Repository<Product> {
 
     @Override
     public void update(Product product) {
-        String sql = "UPDATE products SET name=?, price=? WHERE id=?";
+        String sql = "UPDATE products SET name=?, price=?, category_id=? WHERE id=?";
         try(PreparedStatement statement = getConnection().prepareStatement(sql)) {
             statement.setString(1, product.getName());
             statement.setInt(2, product.getPrice());
-            statement.setLong(3, product.getId());
+            statement.setLong(3, product.getCategory().getId());
+            statement.setLong(4, product.getId());
 
             statement.executeUpdate();
         } catch (SQLException e) {
@@ -124,12 +142,39 @@ public class ProductRepositoryImpl implements Repository<Product> {
         }
     }
 
+    public List<Product> findByCategoryId(Long categoryId) {
+        List<Product> products = new ArrayList<>();
+
+        String sql = """
+                    SELECT p.*, c.id AS c_id, c.name AS c_name 
+                    FROM products p
+                    JOIN categories c ON p.category_id = c.id WHERE p.category_id=?""";
+
+        try (PreparedStatement statement = getConnection().prepareStatement(sql)) {
+            statement.setLong(1, categoryId);
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while(resultSet.next()) {
+                    Product product = createProduct(resultSet);
+                    products.add(product);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return products;
+    }
+
     private static Product createProduct(ResultSet resultSet) throws SQLException {
         Product product = new Product();
+        Category category = new Category(resultSet.getLong("c_id"), resultSet.getString("c_name"));
+
         product.setId(resultSet.getLong("id"));
         product.setName(resultSet.getString("name"));
         product.setPrice(resultSet.getInt("price"));
         product.setDate(resultSet.getDate("date"));
+        product.setCategory(category);
         return product;
     }
 }
